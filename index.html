@@ -18,7 +18,7 @@
 
     .flashcard{
       width: min(92vw, 960px);
-      min-height: 60vh; /* at least 60% of viewport */
+      min-height: 60vh;
       border: 0; border-radius: var(--card-radius);
       background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.98));
       box-shadow: 0 10px 30px rgba(0,0,0,.12), 0 2px 0 rgba(255,255,255,.7) inset;
@@ -30,7 +30,6 @@
       display: flex; flex-direction: column; justify-content: center; gap: 10px;
     }
 
-    /* Word row (word + big sound button) */
     .word-row{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
     .word{
       font-size: clamp(26px, 6vw, 52px); font-weight: 800; line-height: 1.1;
@@ -51,19 +50,16 @@
 
     .badge-soft{ background: rgba(0,0,0,.06); border: 1px solid rgba(0,0,0,.06); color: #333; }
 
-    /* Wrap text cleanly */
     .definition, .example{ overflow-wrap:anywhere; word-break:normal; hyphens:auto; }
     .definition{ font-weight:700; color:#1a1a1a; }
     .example{ color:#495057; }
 
-    /* Flip */
     .flip{ perspective:1200px; }
     .flip-inner{ position:relative; transform-style:preserve-3d; transition:transform .45s ease; }
     .flip.flipped .flip-inner{ transform: rotateY(180deg); }
     .face{ backface-visibility:hidden; position:relative; display:block; }
     .back{ position:absolute; inset:0; transform: rotateY(180deg); }
 
-    /* Swipe glow */
     .swipe-shadow{ position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .18s ease; }
     .swipe-shadow.right{ background: radial-gradient(400px 200px at 100% 50%, rgba(34,193,195,.20), transparent) }
     .swipe-shadow.left { background: radial-gradient(400px 200px at 0%   50%, rgba(255,99,132,.20), transparent) }
@@ -72,14 +68,13 @@
     .pill{ border-radius:999px; padding:.35rem .75rem; font-weight:600; background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.06); }
     .hint{ color:#555; }
 
-    /* === Mobile sticky action bar === */
     .bottom-controls{
       width: min(92vw, 960px);
       display: flex; justify-content: center; gap: .5rem;
       margin-top: .5rem;
     }
     @media (max-width: 576px){
-      .stage{ padding-bottom: 96px !important; } /* room so card doesn't get covered by the bar */
+      .stage{ padding-bottom: 96px !important; }
       .bottom-controls{
         position: fixed;
         left: 50%; transform: translateX(-50%);
@@ -90,7 +85,7 @@
         border-radius: 14px;
         box-shadow: 0 8px 24px rgba(0,0,0,.18);
         padding: .5rem;
-        z-index: 1090;   /* above the card */
+        z-index: 1090;
       }
       .bottom-controls .btn{
         flex: 1 1 0;
@@ -101,8 +96,6 @@
 </head>
 <body>
   <div class="container stage d-flex flex-column align-items-center justify-content-center py-4">
-
-    <!-- TOP: stats + Start Over -->
     <div class="controls d-flex flex-wrap align-items-center justify-content-center mb-2">
       <span class="pill">Known: <span id="knownCount">0</span></span>
       <span class="pill ms-2">Not sure: <span id="notSureCount">0</span></span>
@@ -110,13 +103,11 @@
       <button id="restartBtn" class="btn btn-outline-secondary ms-2">Start Over</button>
     </div>
 
-    <!-- FLASHCARD -->
     <section id="card" class="flashcard flip mb-3" aria-label="Flashcard" role="button" tabindex="0">
       <div class="flip-inner">
         <div class="swipe-shadow left"></div>
         <div class="swipe-shadow right"></div>
 
-        <!-- FRONT -->
         <div class="face" data-flip-area>
           <div class="pad">
             <span class="badge rounded-pill badge-soft text-uppercase">Word</span>
@@ -133,7 +124,6 @@
           </div>
         </div>
 
-        <!-- BACK -->
         <div class="face back" data-flip-area>
           <div class="pad">
             <span class="badge rounded-pill badge-soft text-uppercase">Meanings</span>
@@ -152,14 +142,12 @@
       </div>
     </section>
 
-    <!-- BOTTOM: actions (desktop/tablet inline, mobile fixed sticky bar) -->
     <div class="bottom-controls">
       <button id="notSureBtn" class="btn btn-outline-danger">⬅️ Not sure</button>
       <button id="flipBtn" class="btn btn-primary">Flip</button>
       <button id="knownBtn" class="btn btn-success">Known ➡️</button>
     </div>
 
-    <!-- Toast -->
     <div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index:1080">
       <div id="toast" class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true">
         <div class="d-flex">
@@ -168,7 +156,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -2423,7 +2410,7 @@
   const remainingCountEl = document.getElementById("remainingCount");
 
   function resetSession(){
-    order = shuffle(deck.map((_, i) => i)); // shuffled order on load/start
+    order = shuffle(deck.map((_, i) => i));
     idx = 0; flipped = false;
     notSureSet = new Set(); visitCount = new Map();
     card.classList.remove("flipped");
@@ -2440,7 +2427,6 @@
 
   const activeFace = () => (flipped ? backFace : frontFace);
 
-  // Auto-fit height with 60vh minimum
   const ro = new ResizeObserver(() => {
     requestAnimationFrame(() => {
       const contentH = activeFace().offsetHeight;
@@ -2534,42 +2520,68 @@
     renderNext();
   }
 
-  // Click-to-flip with small-drag guard (ignore button clicks)
+  /* ---------- Interaction fixes: keep buttons working, avoid accidental flips ---------- */
+
+  // 1) Click-to-flip with small-drag guard (ignore controls)
   let pointerDown = null;
-  card.addEventListener('pointerdown', (e) => { pointerDown = { x:e.clientX, y:e.clientY }; });
+  card.addEventListener('pointerdown', (e) => {
+    // Don't arm a flip if the press started on a control inside the card
+    if (e.target.closest('button, .sound-btn')) { pointerDown = null; return; }
+    pointerDown = { x:e.clientX, y:e.clientY };
+  });
+
   card.addEventListener('click', (e) => {
-    if (e.target.closest('button')) return;
+    // If the click is on a control, let it act normally (no flip)
+    if (e.target.closest('button, .sound-btn')) return;
+
     if (pointerDown){
       const dx = Math.abs(e.clientX - pointerDown.x);
       const dy = Math.abs(e.clientY - pointerDown.y);
       if (dx < 5 && dy < 5) flip();
       pointerDown = null;
-    } else { flip(); }
+    } else {
+      // For keyboard-initiated clicks on the card (e.g., Enter on card), still flip
+      flip();
+    }
   });
 
-  // Keyboard + buttons
-  flipBtn.addEventListener("click", flip);
-  knownBtn.addEventListener("click", markKnown);
-  notSureBtn.addEventListener("click", markNotSure);
-  restartBtn.addEventListener("click", resetSession);
-
+  // 2) Keyboard: skip flipping when a focusable control is active
   document.addEventListener("keydown", (e) => {
+    const isControl = !!(e.target && e.target.closest('button, a, input, textarea, select, [role="button"]'));
+    if (isControl) return; // don't hijack Space/Arrows while on controls
+
     if (e.code === "Space"){ e.preventDefault(); flip(); }
     if (e.key === "ArrowRight"){ markKnown(); }
     if (e.key === "ArrowLeft"){ markNotSure(); }
   });
 
-  // Touch swipe
+  // 3) Touch swipe: ignore when the touch began on a control
   let startX = null;
-  card.addEventListener("touchstart", (e) => { startX = e.touches[0].clientX; }, {passive:true});
+  let touchOnControl = false;
+
+  card.addEventListener("touchstart", (e) => {
+    touchOnControl = !!e.target.closest('button, .sound-btn');
+    if (touchOnControl) { startX = null; return; }
+    startX = e.touches[0].clientX;
+  }, {passive:true});
+
   card.addEventListener("touchmove", (e) => {
-    if (startX === null) return;
+    if (touchOnControl || startX === null) return;
     const dx = e.touches[0].clientX - startX;
     const th = 60;
     swipeRight.style.opacity = Math.min(1, Math.max(0, dx/th*0.6));
     swipeLeft.style.opacity  = Math.min(1, Math.max(0,-dx/th*0.6));
   }, {passive:true});
+
   card.addEventListener("touchend", (e) => {
+    if (touchOnControl){
+      // Clean up any glow if a control was tapped
+      touchOnControl = false;
+      swipeRight.style.opacity = 0;
+      swipeLeft.style.opacity = 0;
+      startX = null;
+      return; // allow the button’s default click to fire
+    }
     if (startX === null) return;
     const dx = e.changedTouches[0].clientX - startX;
     startX = null;
@@ -2580,69 +2592,88 @@
     else { flip(); }
   });
 
-/* ===== Pronunciation (GB only) — iOS Safari safe ===== */
-const playFrontBtn = document.getElementById('playFront');
-const playBackBtn  = document.getElementById('playBack');
+  // Buttons
+  flipBtn.addEventListener("click", flip);
+  knownBtn.addEventListener("click", markKnown);
+  notSureBtn.addEventListener("click", markNotSure);
+  restartBtn.addEventListener("click", resetSession);
 
-const audio = new Audio();                 // reuse a single element
-audio.preload = 'none';
-audio.crossOrigin = 'anonymous';
+  // Pronunciation: Google Dictionary first, SpeechSynthesis fallback
+  const playFrontBtn = document.getElementById('playFront');
+  const playBackBtn  = document.getElementById('playBack');
 
-function gbUrl(word){
-  const w = String(word||'').toLowerCase().replace(/[^a-z]/g,'');
-  return `https://ssl.gstatic.com/dictionary/static/sounds/oxford/${w}--_gb_1.mp3`;
-}
-
-async function playGB(word){
-  const text = String(word||'').trim();
-  if (!text) return;
-
-  // Try Oxford GB audio — call play() immediately (keeps user gesture on iOS)
-  try {
-    audio.pause();
-    audio.src = gbUrl(text);
-    await audio.play();
-    return;
-  } catch (err) {
-    // Fallback: Speech Synthesis (prefer British voice)
-    try {
-      const utter = new SpeechSynthesisUtterance(text);
-      const pick = () => {
-        const vs = speechSynthesis.getVoices();
-        return vs.find(v => /en[-_]?GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang));
-      };
-      let voice = pick();
-      if (!voice) {
-        // iOS loads voices async; wait briefly for 'voiceschanged'
-        await new Promise(res => {
-          const t = setTimeout(res, 500);
-          speechSynthesis.addEventListener('voiceschanged', () => { clearTimeout(t); res(); }, { once:true });
-        });
-        voice = pick();
-      }
-      if (voice) utter.voice = voice;
-      utter.rate = 0.95; utter.pitch = 1.0;
-      speechSynthesis.speak(utter);
-    } catch (e) { /* ignore */ }
+  function normalizeWordForGoogle(w){
+    return String(w || "").toLowerCase().replace(/[^a-z]/g, "");
   }
-}
+  function candidateUrls(word){
+    const w = normalizeWordForGoogle(word);
+    const base = "https://ssl.gstatic.com/dictionary/static/sounds/oxford/";
+    const parts = [];
+    ["us","gb"].forEach(loc=>{
+      for (let n=1; n<=3; n++){
+        parts.push(`${base}${w}--_${loc}_${n}.mp3`);
+      }
+    });
+    return parts;
+  }
 
-// Never let the play button flip the card; keep gesture for audio
-const stopAll = e => { e.preventDefault(); e.stopPropagation(); };
-['pointerdown','touchstart','mousedown'].forEach(ev => {
-  playFrontBtn.addEventListener(ev, stopAll);
-  playBackBtn .addEventListener(ev, stopAll);
-});
-playFrontBtn.addEventListener('click', e => { stopAll(e); playGB(wordFront.textContent); });
-playBackBtn .addEventListener('click',  e => { stopAll(e); playGB(wordBack.textContent); });
+  async function playPronunciation(word){
+    const urls = candidateUrls(word);
+    const audio = new Audio();
+    audio.preload = "none";
 
+    for (const url of urls){
+      const ok = await canPlay(url, audio);
+      if (ok){
+        try{
+          await audio.play();
+          return;
+        }catch(e){ /* continue */ }
+      }
+    }
+    speakFallback(word);
+  }
 
-  // Keep height correct on viewport changes
+  function canPlay(url, audio){
+    return new Promise((resolve)=>{
+      let settled = false;
+      const onReady = () => { if (!settled){ settled = true; cleanup(); resolve(true); } };
+      const onError = () => { if (!settled){ settled = true; cleanup(); resolve(false); } };
+      const onTimeout = () => { if (!settled){ settled = true; cleanup(); resolve(false); } };
+      const cleanup = () => {
+        audio.removeEventListener('canplaythrough', onReady);
+        audio.removeEventListener('loadeddata', onReady);
+        audio.removeEventListener('error', onError);
+      };
+      audio.addEventListener('canplaythrough', onReady, { once:true });
+      audio.addEventListener('loadeddata', onReady, { once:true });
+      audio.addEventListener('error', onError, { once:true });
+      audio.src = url;
+      audio.load();
+      setTimeout(onTimeout, 1500);
+    });
+  }
+
+  function speakFallback(word){
+    const text = String(word || "").trim();
+    if (!text) return;
+    try{
+      const utter = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis?.getVoices?.() || [];
+      const preferred = voices.find(v => /en[-_]?US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
+      if (preferred) utter.voice = preferred;
+      utter.rate = 0.95; utter.pitch = 1.0;
+      window.speechSynthesis.speak(utter);
+    }catch(e){/* noop */}
+  }
+
+  // Important: stop event bubbling from the sound buttons so clicks never reach the card
+  playFrontBtn.addEventListener('click', (e)=>{ e.stopPropagation(); playPronunciation(wordFront.textContent); });
+  playBackBtn .addEventListener('click', (e)=>{ e.stopPropagation(); playPronunciation(wordBack.textContent); });
+
   window.addEventListener('resize', adjustCardHeight);
   window.addEventListener('orientationchange', () => setTimeout(adjustCardHeight, 100));
 
-  // Init
-  const knownCount = document.createElement('span'); // (placeholder to avoid errors if removed)
   resetSession();
   </script>
 </body>
