@@ -18,7 +18,7 @@
 
     .flashcard{
       width: min(92vw, 960px);
-      min-height: 60vh;                           /* at least 60% of page height */
+      min-height: 60vh; /* at least 60% of viewport */
       border: 0; border-radius: var(--card-radius);
       background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.98));
       box-shadow: 0 10px 30px rgba(0,0,0,.12), 0 2px 0 rgba(255,255,255,.7) inset;
@@ -30,7 +30,7 @@
       display: flex; flex-direction: column; justify-content: center; gap: 10px;
     }
 
-    /* Word row (word + sound button) */
+    /* Word row (word + big sound button) */
     .word-row{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
     .word{
       font-size: clamp(26px, 6vw, 52px); font-weight: 800; line-height: 1.1;
@@ -38,13 +38,16 @@
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
     .sound-btn{
-      border: 0; border-radius: 12px; background: #eef4ff;
-      padding: .35rem .55rem; line-height: 1; display:inline-flex; align-items:center; gap:.35rem;
+      border: 0; border-radius: 50%; background: #eef4ff;
+      width: 46px; height: 46px;
+      display: inline-flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 0 rgba(0,0,0,.05);
+      flex-shrink: 0; cursor: pointer;
+      touch-action: manipulation;
     }
     .sound-btn:hover{ background:#e3ecff; }
-    .sound-btn:active{ transform: translateY(1px); }
-    .sound-icon{ width: 18px; height: 18px; display:inline-block; }
+    .sound-btn:active{ transform: scale(0.96); }
+    .sound-icon{ width: 26px; height: 26px; }
 
     .badge-soft{ background: rgba(0,0,0,.06); border: 1px solid rgba(0,0,0,.06); color: #333; }
 
@@ -69,10 +72,30 @@
     .pill{ border-radius:999px; padding:.35rem .75rem; font-weight:600; background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.06); }
     .hint{ color:#555; }
 
-    @media (max-width:576px){
-      .word{ font-size: clamp(22px, 7.2vw, 36px); }
-      .flashcard .pad{ padding: 16px 18px; gap: 8px; }
-      #defs .mb-3{ margin-bottom: .75rem !important; }
+    /* === Mobile sticky action bar === */
+    .bottom-controls{
+      width: min(92vw, 960px);
+      display: flex; justify-content: center; gap: .5rem;
+      margin-top: .5rem;
+    }
+    @media (max-width: 576px){
+      .stage{ padding-bottom: 96px !important; } /* room so card doesn't get covered by the bar */
+      .bottom-controls{
+        position: fixed;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(env(safe-area-inset-bottom) + 14px);
+        background: rgba(255,255,255,.9);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(0,0,0,.06);
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.18);
+        padding: .5rem;
+        z-index: 1090;   /* above the card */
+      }
+      .bottom-controls .btn{
+        flex: 1 1 0;
+        min-width: 0;
+      }
     }
   </style>
 </head>
@@ -99,12 +122,11 @@
             <span class="badge rounded-pill badge-soft text-uppercase">Word</span>
             <div class="word-row">
               <div id="wordFront" class="word">—</div>
-              <button id="playFront" class="sound-btn" type="button" title="Play pronunciation">
-                <!-- simple speaker svg -->
+              <button id="playFront" class="sound-btn" type="button" aria-label="Play pronunciation">
                 <svg class="sound-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M3 10v4h4l5 4V6L7 10H3z"></path><path d="M16 8.82v6.36c1.84-.73 3.14-2.51 3.14-4.64 0-2.13-1.3-3.91-3.14-4.64z"></path>
+                  <path d="M3 10v4h4l5 4V6L7 10H3z"></path>
+                  <path d="M16 8.82v6.36c1.84-.73 3.14-2.51 3.14-4.64 0-2.13-1.3-3.91-3.14-4.64z"></path>
                 </svg>
-                <span class="d-none d-sm-inline">Play</span>
               </button>
             </div>
             <div class="hint">Click/Space to flip. Swipe ➡️ known, ⬅️ not sure.</div>
@@ -117,11 +139,11 @@
             <span class="badge rounded-pill badge-soft text-uppercase">Meanings</span>
             <div class="word-row">
               <div id="wordBack" class="h4 fw-bold mb-2" style="margin:0">—</div>
-              <button id="playBack" class="sound-btn" type="button" title="Play pronunciation">
+              <button id="playBack" class="sound-btn" type="button" aria-label="Play pronunciation">
                 <svg class="sound-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M3 10v4h4l5 4V6L7 10H3z"></path><path d="M16 8.82v6.36c1.84-.73 3.14-2.51 3.14-4.64 0-2.13-1.3-3.91-3.14-4.64z"></path>
+                  <path d="M3 10v4h4l5 4V6L7 10H3z"></path>
+                  <path d="M16 8.82v6.36c1.84-.73 3.14-2.51 3.14-4.64 0-2.13-1.3-3.91-3.14-4.64z"></path>
                 </svg>
-                <span class="d-none d-sm-inline">Play</span>
               </button>
             </div>
             <div id="defs"></div>
@@ -130,8 +152,8 @@
       </div>
     </section>
 
-    <!-- BOTTOM: actions -->
-    <div class="controls d-flex flex-wrap align-items-center justify-content-center">
+    <!-- BOTTOM: actions (desktop/tablet inline, mobile fixed sticky bar) -->
+    <div class="bottom-controls">
       <button id="notSureBtn" class="btn btn-outline-danger">⬅️ Not sure</button>
       <button id="flipBtn" class="btn btn-primary">Flip</button>
       <button id="knownBtn" class="btn btn-success">Known ➡️</button>
@@ -151,7 +173,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-  // === Your deck (shuffle on load) ===
+  /* ===== Sample deck (replace with your JSON) ===== */
   const deck = [
     {
         "word": "Abrupt",
@@ -2365,7 +2387,6 @@
         ]
     }
 ];
-  // ===================================
 
   const initialTotal = deck.length;
   let order, idx, flipped, notSureSet, visitCount;
@@ -2403,10 +2424,8 @@
 
   function resetSession(){
     order = shuffle(deck.map((_, i) => i)); // shuffled order on load/start
-    idx = 0;
-    flipped = false;
-    notSureSet = new Set();
-    visitCount = new Map();
+    idx = 0; flipped = false;
+    notSureSet = new Set(); visitCount = new Map();
     card.classList.remove("flipped");
     render();
   }
@@ -2421,7 +2440,7 @@
 
   const activeFace = () => (flipped ? backFace : frontFace);
 
-  // ResizeObserver to auto-fit the active face; also respect 60vh minimum
+  // Auto-fit height with 60vh minimum
   const ro = new ResizeObserver(() => {
     requestAnimationFrame(() => {
       const contentH = activeFace().offsetHeight;
@@ -2429,8 +2448,7 @@
       card.style.height = Math.max(contentH, minH) + "px";
     });
   });
-  ro.observe(frontFace);
-  ro.observe(backFace);
+  ro.observe(frontFace); ro.observe(backFace);
 
   function adjustCardHeight(){
     requestAnimationFrame(() => {
@@ -2516,7 +2534,7 @@
     renderNext();
   }
 
-  // Click-to-flip with small-drag guard
+  // Click-to-flip with small-drag guard (ignore button clicks)
   let pointerDown = null;
   card.addEventListener('pointerdown', (e) => { pointerDown = { x:e.clientX, y:e.clientY }; });
   card.addEventListener('click', (e) => {
@@ -2562,92 +2580,73 @@
     else { flip(); }
   });
 
-  // ---- Pronunciation: Google Dictionary first, SpeechSynthesis fallback ----
-  const playFrontBtn = document.getElementById('playFront');
-  const playBackBtn  = document.getElementById('playBack');
+/* ===== Pronunciation (British English only) ===== */
+const playFrontBtn = document.getElementById('playFront');
+const playBackBtn  = document.getElementById('playBack');
 
-  function normalizeWordForGoogle(w){
-    return String(w || "").toLowerCase().replace(/[^a-z]/g, "");
+function normalizeWordForGoogle(w){
+  return String(w || "").toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function candidateUrl(word){
+  const w = normalizeWordForGoogle(word);
+  // Always use British English audio (Oxford)
+  return `https://ssl.gstatic.com/dictionary/static/sounds/oxford/${w}--_gb_1.mp3`;
+}
+
+async function canPlay(url, audio){
+  return new Promise((resolve)=>{
+    let done = false;
+    const ok = ()=>{ if(!done){done=true;cleanup();resolve(true);} };
+    const err= ()=>{ if(!done){done=true;cleanup();resolve(false);} };
+    const cleanup=()=>{ 
+      audio.removeEventListener('canplaythrough',ok);
+      audio.removeEventListener('loadeddata',ok);
+      audio.removeEventListener('error',err);
+    };
+    audio.addEventListener('canplaythrough',ok,{once:true});
+    audio.addEventListener('loadeddata',ok,{once:true});
+    audio.addEventListener('error',err,{once:true});
+    audio.src=url; audio.load(); setTimeout(err,1500);
+  });
+}
+
+async function playPronunciation(word){
+  const url = candidateUrl(word);
+  const audio = new Audio();
+  audio.preload = "none";
+  if (await canPlay(url, audio)){
+    try { await audio.play(); return; } catch(e){}
   }
-  function candidateUrls(word){
-    const w = normalizeWordForGoogle(word);
-    // Common Oxford/Google variants (US/UK, first/second recording)
-    const base = "https://ssl.gstatic.com/dictionary/static/sounds/oxford/";
-    const parts = [];
-    // try a few likely combinations
-    ["us","gb"].forEach(loc=>{
-      for (let n=1; n<=3; n++){
-        parts.push(`${base}${w}--_${loc}_${n}.mp3`);
-      }
-    });
-    return parts;
-  }
+  // fallback: Speech synthesis (British if available)
+  const text = String(word || "").trim();
+  if (!text) return;
+  try {
+    const utt = new SpeechSynthesisUtterance(text);
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(v=>/en[-_]?GB/i.test(v.lang)) || voices.find(v=>/^en/i.test(v.lang));
+    if (v) utt.voice = v;
+    utt.rate = 0.95; utt.pitch = 1.0;
+    speechSynthesis.speak(utt);
+  } catch(e){}
+}
 
-  // Try to play the first working Google audio; otherwise speech synthesis
-  async function playPronunciation(word){
-    const urls = candidateUrls(word);
-    // Reuse a single audio element
-    const audio = new Audio();
-    audio.preload = "none";
+// Prevent play button taps from flipping the card
+const stopAll = (e)=>{ e.preventDefault(); e.stopPropagation(); };
+['pointerdown','touchstart','mousedown','click'].forEach(ev=>{
+  playFrontBtn.addEventListener(ev, stopAll);
+  playBackBtn .addEventListener(ev, stopAll);
+});
+playFrontBtn.addEventListener('click', ()=> playPronunciation(wordFront.textContent));
+playBackBtn .addEventListener('click', ()=> playPronunciation(wordBack.textContent));
 
-    for (const url of urls){
-      const ok = await canPlay(url, audio);
-      if (ok){
-        try{
-          await audio.play();
-          return;
-        }catch(e){ /* fallthrough to next/fallback */ }
-      }
-    }
-    // Fallback: Web Speech API (browser voice)
-    speakFallback(word);
-  }
-
-  function canPlay(url, audio){
-    return new Promise((resolve)=>{
-      let settled = false;
-      const onReady = () => { if (!settled){ settled = true; cleanup(); resolve(true); } };
-      const onError = () => { if (!settled){ settled = true; cleanup(); resolve(false); } };
-      const onTimeout = () => { if (!settled){ settled = true; cleanup(); resolve(false); } };
-      const cleanup = () => {
-        audio.removeEventListener('canplaythrough', onReady);
-        audio.removeEventListener('loadeddata', onReady);
-        audio.removeEventListener('error', onError);
-      };
-      audio.addEventListener('canplaythrough', onReady, { once:true });
-      audio.addEventListener('loadeddata', onReady, { once:true });
-      audio.addEventListener('error', onError, { once:true });
-      audio.src = url;
-      audio.load();
-      // guard in case no event fires
-      setTimeout(onTimeout, 1500);
-    });
-  }
-
-  function speakFallback(word){
-    const text = String(word || "").trim();
-    if (!text) return;
-    try{
-      const utter = new SpeechSynthesisUtterance(text);
-      // Prefer US English voice if available
-      const voices = window.speechSynthesis?.getVoices?.() || [];
-      const preferred = voices.find(v => /en[-_]?US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
-      if (preferred) utter.voice = preferred;
-      utter.rate = 0.95; utter.pitch = 1.0;
-      window.speechSynthesis.speak(utter);
-    }catch(e){
-      // noop if API is unavailable
-    }
-  }
-
-  playFrontBtn.addEventListener('click', (e)=>{ e.stopPropagation(); playPronunciation(wordFront.textContent); });
-  playBackBtn .addEventListener('click', (e)=>{ e.stopPropagation(); playPronunciation(wordBack.textContent); });
 
   // Keep height correct on viewport changes
   window.addEventListener('resize', adjustCardHeight);
   window.addEventListener('orientationchange', () => setTimeout(adjustCardHeight, 100));
 
   // Init
+  const knownCount = document.createElement('span'); // (placeholder to avoid errors if removed)
   resetSession();
   </script>
 </body>
