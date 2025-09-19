@@ -2580,65 +2580,61 @@
     else { flip(); }
   });
 
-/* ===== Pronunciation (British English only) ===== */
+/* ===== Pronunciation (GB only) — iOS Safari safe ===== */
 const playFrontBtn = document.getElementById('playFront');
 const playBackBtn  = document.getElementById('playBack');
 
-function normalizeWordForGoogle(w){
-  return String(w || "").toLowerCase().replace(/[^a-z]/g, "");
-}
+const audio = new Audio();                 // reuse a single element
+audio.preload = 'none';
+audio.crossOrigin = 'anonymous';
 
-function candidateUrl(word){
-  const w = normalizeWordForGoogle(word);
-  // Always use British English audio (Oxford)
+function gbUrl(word){
+  const w = String(word||'').toLowerCase().replace(/[^a-z]/g,'');
   return `https://ssl.gstatic.com/dictionary/static/sounds/oxford/${w}--_gb_1.mp3`;
 }
 
-async function canPlay(url, audio){
-  return new Promise((resolve)=>{
-    let done = false;
-    const ok = ()=>{ if(!done){done=true;cleanup();resolve(true);} };
-    const err= ()=>{ if(!done){done=true;cleanup();resolve(false);} };
-    const cleanup=()=>{ 
-      audio.removeEventListener('canplaythrough',ok);
-      audio.removeEventListener('loadeddata',ok);
-      audio.removeEventListener('error',err);
-    };
-    audio.addEventListener('canplaythrough',ok,{once:true});
-    audio.addEventListener('loadeddata',ok,{once:true});
-    audio.addEventListener('error',err,{once:true});
-    audio.src=url; audio.load(); setTimeout(err,1500);
-  });
-}
-
-async function playPronunciation(word){
-  const url = candidateUrl(word);
-  const audio = new Audio();
-  audio.preload = "none";
-  if (await canPlay(url, audio)){
-    try { await audio.play(); return; } catch(e){}
-  }
-  // fallback: Speech synthesis (British if available)
-  const text = String(word || "").trim();
+async function playGB(word){
+  const text = String(word||'').trim();
   if (!text) return;
+
+  // Try Oxford GB audio — call play() immediately (keeps user gesture on iOS)
   try {
-    const utt = new SpeechSynthesisUtterance(text);
-    const voices = speechSynthesis.getVoices();
-    const v = voices.find(v=>/en[-_]?GB/i.test(v.lang)) || voices.find(v=>/^en/i.test(v.lang));
-    if (v) utt.voice = v;
-    utt.rate = 0.95; utt.pitch = 1.0;
-    speechSynthesis.speak(utt);
-  } catch(e){}
+    audio.pause();
+    audio.src = gbUrl(text);
+    await audio.play();
+    return;
+  } catch (err) {
+    // Fallback: Speech Synthesis (prefer British voice)
+    try {
+      const utter = new SpeechSynthesisUtterance(text);
+      const pick = () => {
+        const vs = speechSynthesis.getVoices();
+        return vs.find(v => /en[-_]?GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang));
+      };
+      let voice = pick();
+      if (!voice) {
+        // iOS loads voices async; wait briefly for 'voiceschanged'
+        await new Promise(res => {
+          const t = setTimeout(res, 500);
+          speechSynthesis.addEventListener('voiceschanged', () => { clearTimeout(t); res(); }, { once:true });
+        });
+        voice = pick();
+      }
+      if (voice) utter.voice = voice;
+      utter.rate = 0.95; utter.pitch = 1.0;
+      speechSynthesis.speak(utter);
+    } catch (e) { /* ignore */ }
+  }
 }
 
-// Prevent play button taps from flipping the card
-const stopAll = (e)=>{ e.preventDefault(); e.stopPropagation(); };
-['pointerdown','touchstart','mousedown','click'].forEach(ev=>{
+// Never let the play button flip the card; keep gesture for audio
+const stopAll = e => { e.preventDefault(); e.stopPropagation(); };
+['pointerdown','touchstart','mousedown'].forEach(ev => {
   playFrontBtn.addEventListener(ev, stopAll);
   playBackBtn .addEventListener(ev, stopAll);
 });
-playFrontBtn.addEventListener('click', ()=> playPronunciation(wordFront.textContent));
-playBackBtn .addEventListener('click', ()=> playPronunciation(wordBack.textContent));
+playFrontBtn.addEventListener('click', e => { stopAll(e); playGB(wordFront.textContent); });
+playBackBtn .addEventListener('click',  e => { stopAll(e); playGB(wordBack.textContent); });
 
 
   // Keep height correct on viewport changes
